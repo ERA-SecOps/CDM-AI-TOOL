@@ -1,166 +1,323 @@
 import streamlit as st
 import pandas as pd
-import random
 from faker import Faker
+import random
+import json
+import base64
+from datetime import datetime
+
+# Page Config
+st.set_page_config(
+    page_title="ERA SecOps | Cyber Defense Matrix Platform",
+    page_icon="🛡️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Helper: Inline SVG to Base64
+def svg_to_base64(svg_str):
+    return f"data:image/svg+xml;base64,{base64.b64encode(svg_str.encode('utf-8')).decode('utf-8')}"
+
+# Custom SVGs
+SHIELD_SVG = svg_to_base64('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>')
+ALERT_SVG = svg_to_base64('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f85149" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>')
+
+# Global Custom CSS
+st.markdown(f"""
+<style>
+    /* Dark Theme Base */
+    .stApp {{
+        background-color: #090d16;
+        color: #adbac7;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }}
+    
+    /* Dark Sidebar */
+    [data-testid="stSidebar"] {{
+        background-color: #111622 !important;
+        border-right: 1px solid #1c212e;
+    }}
+    [data-testid="stSidebar"] * {{
+        color: #adbac7 !important;
+    }}
+
+    /* Top Command Header */
+    .top-header {{
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #111622;
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: 1px solid #1c212e;
+        margin-bottom: 20px;
+    }}
+    .brand-title {{
+        font-size: 20px;
+        font-weight: 700;
+        color: #f0f6fc;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }}
+    .status-pill {{
+        background-color: rgba(46, 160, 67, 0.15);
+        color: #3fb950;
+        border: 1px solid rgba(46, 160, 67, 0.4);
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 600;
+    }}
+
+    /* Enterprise Metric Cards */
+    .metric-container {{
+        background-color: #111622;
+        border: 1px solid #1c212e;
+        border-radius: 8px;
+        padding: 16px;
+        position: relative;
+    }}
+    .metric-header {{
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #768390;
+        margin-bottom: 8px;
+    }}
+    .metric-value {{
+        font-size: 28px;
+        font-weight: 700;
+        color: #f0f6fc;
+    }}
+    .metric-footer {{
+        font-size: 12px;
+        color: #57ab5a;
+        margin-top: 6px;
+    }}
+
+    /* Custom Matrix Display Table */
+    .cdm-table {{
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 6px;
+        margin-top: 10px;
+    }}
+    .cdm-header {{
+        background-color: #161b26;
+        color: #768390;
+        padding: 12px;
+        font-size: 12px;
+        text-transform: uppercase;
+        border-radius: 4px;
+        text-align: center;
+    }}
+    .cdm-cell {{
+        background-color: #111622;
+        border: 1px solid #1c212e;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        color: #adbac7;
+        transition: all 0.2s ease;
+    }}
+    .cdm-cell:hover {{
+        border-color: #316dca;
+        background-color: #161c2e;
+    }}
+    .cell-title {{
+        font-weight: 600;
+        color: #f0f6fc;
+        margin-bottom: 4px;
+    }}
+    .cell-tag {{
+        font-size: 10px;
+        color: #3fb950;
+        background: rgba(63, 185, 80, 0.1);
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-block;
+    }}
+
+    #MainMenu, footer {{ visibility: hidden; }}
+</style>
+""", unsafe_allow_html=True)
+
+# State Management
+if "inventory" not in st.session_state:
+    st.session_state.inventory = []
+if "telemetry_logs" not in st.session_state:
+    st.session_state.telemetry_logs = []
 
 fake = Faker()
 
-st.set_page_config(page_title="CDM AI Automation Lab", layout="wide")
-st.title("🛡️ Cyber Defense Matrix: AI Automation Lab")
+# Top Command Header
+st.markdown(f"""
+<div class="top-header">
+    <div class="brand-title">
+        <img src="{SHIELD_SVG}" width="24" height="24"/>
+        <span>ERA SecOps <span style="color: #58a6ff; font-weight: 300;">| Cyber Defense Matrix Suite</span></span>
+    </div>
+    <div style="display: flex; gap: 16px; align-items: center;">
+        <span class="status-pill">● ENGINE ONLINE</span>
+        <span style="font-size: 12px; color: #768390;">UTC: {datetime.utcnow().strftime('%H:%M:%S')}</span>
+    </div>
+</div>
+""", unsafe_allow_html=True)
 
-# --- SESSION STATE INITIALIZATION ---
-state_keys = [
-    'inventory', 'blocked_ips', 'app_protect', 'net_protect', 
-    'data_protect', 'user_protect', 'app_detect', 'net_detect', 
-    'data_detect', 'user_detect', 'data_recover', 'device_recover'
-]
+# Top Metric Row
+c1, c2, c3, c4 = st.columns(4)
+with c1:
+    st.markdown(f"""
+    <div class="metric-container">
+        <div class="metric-header">Active Inventory</div>
+        <div class="metric-value">{len(st.session_state.inventory)}</div>
+        <div class="metric-footer">↑ Asset Sync Active</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-for key in state_keys:
-    if key not in st.session_state:
-        if key in ['inventory', 'blocked_ips']:
-            st.session_state[key] = []
-        else:
-            st.session_state[key] = False
+with c2:
+    st.markdown("""
+    <div class="metric-container">
+        <div class="metric-header">Threat Status</div>
+        <div class="metric-value" style="color: #3fb950;">LOW</div>
+        <div class="metric-footer">Zero Critical Alerts</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# --- 1. IDENTIFY FUNCTION ---
-st.header("1. Identify Column: Automated Asset Discovery")
-col1, col2 = st.columns(2)
+with c3:
+    st.markdown("""
+    <div class="metric-container">
+        <div class="metric-header">CDM Operational Cells</div>
+        <div class="metric-value">25 / 25</div>
+        <div class="metric-footer" style="color: #58a6ff;">100% Coverage</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-with col1:
-    if st.button("🚀 Run AI-Powered Network Scan"):
-        new_assets = []
-        for _ in range(5):
-            new_assets.append({
-                "Asset Type": "Device",
-                "Hostname": f"WKSTN-{random.randint(1000, 9999)}",
-                "IP Address": fake.ipv4(),
-                "OS": random.choice(["macOS", "Windows 11", "Ubuntu 22.04"]),
-                "Discovery Method": "AI Pattern Matching"
-            })
-        st.session_state.inventory = new_assets
-        st.success("Scan Complete! AI identified 5 new devices.")
+with c4:
+    st.markdown("""
+    <div class="metric-container">
+        <div class="metric-header">Automated Response MTTR</div>
+        <div class="metric-value">< 1.4s</div>
+        <div class="metric-footer">SOAR Webhooks Armed</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-with col2:
-    if st.button("🗑️ Reset Environment"):
-        for key in state_keys:
-            if key in ['inventory', 'blocked_ips']:
-                st.session_state[key] = []
-            else:
-                st.session_state[key] = False
+st.markdown("<br>", unsafe_allow_html=True)
 
-if st.session_state.inventory:
-    st.subheader("Current Asset Inventory")
-    st.table(pd.DataFrame(st.session_state.inventory))
+# Sidebar Controls
+st.sidebar.markdown("### 🎛️ Operations Control")
+sim_type = st.sidebar.selectbox("Select Attack Scenario", ["Baseline Operations", "Ransomware Execution", "Credential Harvesting", "Data Exfiltration"])
 
-# --- 2. PROTECT CONTROLS ---
-st.header("2. Protect Column: Security Controls")
-p_col1, p_col2, p_col3, p_col4 = st.columns(4)
+if st.sidebar.button("⚡ Run AI Discovery Scan", type="primary", use_container_width=True):
+    new_assets = []
+    for _ in range(5):
+        host = f"WORKSTATION-{random.randint(100, 999)}"
+        ip = fake.ipv4_private()
+        os_name = random.choice(["Windows 11 Enterprise", "macOS Sequoia", "Ubuntu 24.04 LTS"])
+        new_assets.append({"Hostname": host, "IP Address": ip, "OS": os_name, "Status": "Monitored"})
+        
+        # Generate Log
+        st.session_state.telemetry_logs.append({
+            "Timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
+            "Event": "ASSET_DISCOVERED",
+            "Target": f"{host} ({ip})",
+            "NIST Function": "Identify",
+            "Asset Class": "Devices",
+            "Severity": "INFO"
+        })
+    st.session_state.inventory.extend(new_assets)
+    st.sidebar.success("Discovered 5 new devices!")
 
-with p_col1:
-    if st.button("🔒 App Whitelisting"):
-        st.session_state.app_protect = True
-        st.success("App Control enforced.")
+if st.sidebar.button("🧹 Reset Telemetry", use_container_width=True):
+    st.session_state.inventory = []
+    st.session_state.telemetry_logs = []
+    st.rerun()
 
-with p_col2:
-    if st.button("🛡️ Network Microsegmentation"):
-        st.session_state.net_protect = True
-        st.success("Zero Trust ACLs deployed.")
+# Main Matrix & Telemetry Tabs
+tab_matrix, tab_telemetry = st.tabs(["🧩 5x5 Cyber Defense Matrix Engine", "📜 SIEM Telemetry Console"])
 
-with p_col3:
-    if st.button("🔑 Enable Data Encryption"):
-        st.session_state.data_protect = True
-        st.success("AES-256 BitLocker/FileVault active.")
-
-with p_col4:
-    if st.button("👤 Enforce MFA & PAM"):
-        st.session_state.user_protect = True
-        st.success("FIDO2 Multi-Factor required.")
-
-# --- 3. DETECT CONTROLS ---
-st.header("3. Detect Column: Telemetry & Monitoring")
-d_col1, d_col2, d_col3, d_col4 = st.columns(4)
-
-with d_col1:
-    if st.button("🔍 App SIEM Logging"):
-        st.session_state.app_detect = True
-        st.info("App telemetry active.")
-
-with d_col2:
-    if st.button("📡 Network IDS Engine"):
-        st.session_state.net_detect = True
-        st.info("Suricata/Zeek active.")
-
-with d_col3:
-    if st.button("💾 DLP Data Scanning"):
-        st.session_state.data_detect = True
-        st.info("DLP monitoring sensitive data.")
-
-with d_col4:
-    if st.button("🚨 User Anomaly Analytics"):
-        st.session_state.user_detect = True
-        st.info("UEBA tracking abnormal logins.")
-
-# --- 4. RESPOND FUNCTION ---
-st.header("4. Respond Column: Automated Threat Containment")
-
-if st.session_state.inventory:
-    target_device = st.session_state.inventory[0]
-    st.warning(f"⚠️ Simulated Malicious Traffic Detected from: **{target_device['Hostname']}** ({target_device['IP Address']})")
+with tab_matrix:
+    st.subheader("Sounil Yu 5x5 Matrix Control Plane")
     
-    if st.button("⚡ Execute AI Auto-Isolation Script"):
-        if target_device['IP Address'] not in st.session_state.blocked_ips:
-            st.session_state.blocked_ips.append(target_device['IP Address'])
-        st.success(f"Generated firewall rule: `iptables -A INPUT -s {target_device['IP Address']} -j DROP`. Device isolated.")
+    # Custom HTML CDM Rendering
+    cdm_html = """
+    <table class="cdm-table">
+        <tr>
+            <th class="cdm-header">NIST CSF</th>
+            <th class="cdm-header">Devices</th>
+            <th class="cdm-header">Applications</th>
+            <th class="cdm-header">Networks</th>
+            <th class="cdm-header">Data</th>
+            <th class="cdm-header">Users</th>
+        </tr>
+        <tr>
+            <td class="cdm-header">Identify</td>
+            <td class="cdm-cell"><div class="cell-title">Asset Discovery</div><span class="cell-tag">AUTOMATED</span></td>
+            <td class="cdm-cell"><div class="cell-title">App Inventory</div><span class="cell-tag">ACTIVE</span></td>
+            <td class="cdm-cell"><div class="cell-title">Port Mapping</div><span class="cell-tag">ACTIVE</span></td>
+            <td class="cdm-cell"><div class="cell-title">Data Discovery</div><span class="cell-tag">ACTIVE</span></td>
+            <td class="cdm-cell"><div class="cell-title">IAM Mapping</div><span class="cell-tag">ACTIVE</span></td>
+        </tr>
+        <tr>
+            <td class="cdm-header">Protect</td>
+            <td class="cdm-cell"><div class="cell-title">EDR Prevention</div><span class="cell-tag">ENFORCED</span></td>
+            <td class="cdm-cell"><div class="cell-title">App Control</div><span class="cell-tag">ENFORCED</span></td>
+            <td class="cdm-cell"><div class="cell-title">Microsegmentation</div><span class="cell-tag">ENFORCED</span></td>
+            <td class="cdm-cell"><div class="cell-title">AES-256 Vault</div><span class="cell-tag">ENFORCED</span></td>
+            <td class="cdm-cell"><div class="cell-title">FIDO2 MFA</div><span class="cell-tag">ENFORCED</span></td>
+        </tr>
+        <tr>
+            <td class="cdm-header">Detect</td>
+            <td class="cdm-cell"><div class="cell-title">Behavioral EDR</div><span class="cell-tag">MONITORING</span></td>
+            <td class="cdm-cell"><div class="cell-title">SAST Logging</div><span class="cell-tag">MONITORING</span></td>
+            <td class="cdm-cell"><div class="cell-title">NDR Sensor</div><span class="cell-tag">MONITORING</span></td>
+            <td class="cdm-cell"><div class="cell-title">DLP Inspector</div><span class="cell-tag">MONITORING</span></td>
+            <td class="cdm-cell"><div class="cell-title">UEBA Engine</div><span class="cell-tag">MONITORING</span></td>
+        </tr>
+        <tr>
+            <td class="cdm-header">Respond</td>
+            <td class="cdm-cell"><div class="cell-title">Host Quarantine</div><span class="cell-tag">READY</span></td>
+            <td class="cdm-cell"><div class="cell-title">Process Kill</div><span class="cell-tag">READY</span></td>
+            <td class="cdm-cell"><div class="cell-title">Dynamic ACL</div><span class="cell-tag">READY</span></td>
+            <td class="cdm-cell"><div class="cell-title">Access Revocation</div><span class="cell-tag">READY</span></td>
+            <td class="cdm-cell"><div class="cell-title">Session Terminate</div><span class="cell-tag">READY</span></td>
+        </tr>
+        <tr>
+            <td class="cdm-header">Recover</td>
+            <td class="cdm-cell"><div class="cell-title">Gold Reimage</div><span class="cell-tag">PLAYBOOK</span></td>
+            <td class="cdm-cell"><div class="cell-title">Patch Rollback</div><span class="cell-tag">PLAYBOOK</span></td>
+            <td class="cdm-cell"><div class="cell-title">Route Restoration</div><span class="cell-tag">PLAYBOOK</span></td>
+            <td class="cdm-cell"><div class="cell-title">Snapshot Restore</div><span class="cell-tag">PLAYBOOK</span></td>
+            <td class="cdm-cell"><div class="cell-title">Cred Reset</div><span class="cell-tag">PLAYBOOK</span></td>
+        </tr>
+    </table>
+    """
+    st.markdown(cdm_html, unsafe_allow_html=True)
 
-if st.session_state.blocked_ips:
-    st.subheader("Active Firewall Isolation Rules")
-    blocked_df = pd.DataFrame({"Blocked IP Address": st.session_state.blocked_ips, "Action": "INPUT DROP"})
-    st.table(blocked_df)
-
-# --- 5. RECOVER FUNCTION ---
-st.header("5. Recover Column: Automated Remediation")
-r_col1, r_col2 = st.columns(2)
-
-with r_col1:
-    if st.button("💾 Trigger Immutable Data Restore"):
-        st.session_state.data_recover = True
-        st.success("Data Recovery: Volume shadow copy snapshot restored.")
-
-with r_col2:
-    if st.button("🔄 Reimage Isolated Device"):
-        st.session_state.device_recover = True
-        st.success("Device Recovery: Golden image deployed to target workstation.")
-
-# --- 6. MATRIX COVERAGE GRID ---
-st.header("6. Cyber Defense Matrix Coverage")
-assets = ["Devices", "Applications", "Networks", "Data", "Users"]
-functions = ["Identify", "Protect", "Detect", "Respond", "Recover"]
-
-matrix_df = pd.DataFrame("⚪ Empty", index=assets, columns=functions)
-
-# Dynamic mapping of session states to matrix cells
-cell_mappings = {
-    ("Devices", "Identify"): bool(st.session_state.inventory),
-    ("Devices", "Respond"): bool(st.session_state.blocked_ips),
-    ("Devices", "Recover"): st.session_state.device_recover,
-    ("Applications", "Protect"): st.session_state.app_protect,
-    ("Applications", "Detect"): st.session_state.app_detect,
-    ("Networks", "Protect"): st.session_state.net_protect,
-    ("Networks", "Detect"): st.session_state.net_detect,
-    ("Data", "Protect"): st.session_state.data_protect,
-    ("Data", "Detect"): st.session_state.data_detect,
-    ("Data", "Recover"): st.session_state.data_recover,
-    ("Users", "Protect"): st.session_state.user_protect,
-    ("Users", "Detect"): st.session_state.user_detect,
-}
-
-for (asset, func), is_active in cell_mappings.items():
-    if is_active:
-        matrix_df.at[asset, func] = "🔵 AI ACTIVE"
-
-def highlight_ai(val):
-    if 'ACTIVE' in str(val):
-        return 'background-color: #1f77b4; color: white; font-weight: bold'
-    return ''
-
-st.table(matrix_df.style.map(highlight_ai))
+with tab_telemetry:
+    st.subheader("Real-Time SIEM Export Center")
+    if st.session_state.telemetry_logs:
+        df_logs = pd.DataFrame(st.session_state.telemetry_logs)
+        st.dataframe(df_logs, use_container_width=True)
+        
+        # Log Export Buttons
+        col_exp1, col_exp2 = st.columns(2)
+        with col_exp1:
+            st.download_button(
+                label="📥 Export SIEM Telemetry (JSON)",
+                data=json.dumps(st.session_state.telemetry_logs, indent=2),
+                file_name=f"siem_telemetry_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                use_container_width=True
+            )
+        with col_exp2:
+            st.download_button(
+                label="📥 Export SIEM Telemetry (CSV)",
+                data=df_logs.to_csv(index=False),
+                file_name=f"siem_telemetry_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                use_container_width=True
+            )
+    else:
+        st.info("No active telemetry generated. Run an AI Discovery Scan from the left sidebar.")
