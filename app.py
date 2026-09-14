@@ -166,22 +166,26 @@ if "threat_status" not in st.session_state:
 
 fake = Faker()
 
-# Live Local ARP Scanner Engine
+# Live Local ARP Scanner Engine (Optimized for macOS / Streamlit)
 def run_live_arp_scan(ip_range="192.168.1.0/24"):
     try:
         from scapy.all import ARP, Ether, srp
+        
+        # Build ARP Broadcast Frame
         arp = ARP(pdst=ip_range)
         ether = Ether(dst="ff:ff:ff:ff:ff:ff")
         packet = ether / arp
 
-        result = srp(packet, timeout=2, verbose=False)[0]
+        # timeout=0.8 speeds up response time across the subnet
+        # iface="en0" forces primary Wi-Fi/Ethernet interface on macOS
+        result = srp(packet, timeout=0.8, verbose=False, iface="en0")[0]
 
         discovered = []
         for sent, received in result:
             try:
                 hostname = socket.gethostbyaddr(received.psrc)[0]
             except Exception:
-                hostname = "Unknown-Device"
+                hostname = "Network Device"
 
             discovered.append({
                 "Hostname": hostname,
@@ -193,11 +197,10 @@ def run_live_arp_scan(ip_range="192.168.1.0/24"):
 
     except PermissionError:
         st.sidebar.error("Permission Denied: Raw sockets require elevated rights.")
-        st.sidebar.info("Fix: Open VS Code/Terminal as Administrator (Windows) or use 'sudo streamlit run app.py' (macOS/Linux).")
+        st.sidebar.info("Fix: Launch using 'sudo ./.venv/bin/streamlit run app.py'")
         return []
     except Exception as e:
-        st.sidebar.error(f"Live scan failed: {str(e)}")
-        st.sidebar.warning("Note: Cloud hosting (Streamlit Cloud) restricts raw ARP sockets. Use local execution for live scans.")
+        st.sidebar.error(f"Live scan error: {str(e)}")
         return []
 
 # ==============================================================================
