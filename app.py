@@ -6,7 +6,7 @@ import json
 import base64
 from datetime import datetime
 
-# Page Config
+# 1. Page Configuration (Must be the first Streamlit command)
 st.set_page_config(
     page_title="ERA SecOps | Cyber Defense Matrix Platform",
     page_icon="🛡️",
@@ -14,35 +14,39 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Helper: Inline SVG to Base64
-def svg_to_base64(svg_str):
-    return f"data:image/svg+xml;base64,{base64.b64encode(svg_str.encode('utf-8')).decode('utf-8')}"
-
-# Custom SVGs
-SHIELD_SVG = svg_to_base64('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>')
-ALERT_SVG = svg_to_base64('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f85149" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>')
-
-# Global Custom CSS
-st.markdown(f"""
+# 2. Inject CSS Theme & Header Suppressor
+st.markdown("""
 <style>
+    /* Completely Hide Streamlit Top Header Bar & White Stripe */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+    div[data-testid="stDecoration"] {
+        display: none !important;
+    }
+    .block-container {
+        padding-top: 1rem !important;
+        padding-bottom: 0rem !important;
+    }
+
     /* Dark Theme Base */
-    .stApp {{
+    .stApp {
         background-color: #090d16;
         color: #adbac7;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    }}
+    }
     
-    /* Dark Sidebar */
-    [data-testid="stSidebar"] {{
+    /* Dark Theme Sidebar Target */
+    [data-testid="stSidebar"] {
         background-color: #111622 !important;
         border-right: 1px solid #1c212e;
-    }}
-    [data-testid="stSidebar"] * {{
+    }
+    [data-testid="stSidebar"] * {
         color: #adbac7 !important;
-    }}
+    }
 
     /* Top Command Header */
-    .top-header {{
+    .top-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -51,16 +55,16 @@ st.markdown(f"""
         border-radius: 8px;
         border: 1px solid #1c212e;
         margin-bottom: 20px;
-    }}
-    .brand-title {{
+    }
+    .brand-title {
         font-size: 20px;
         font-weight: 700;
         color: #f0f6fc;
         display: flex;
         align-items: center;
         gap: 12px;
-    }}
-    .status-pill {{
+    }
+    .status-pill {
         background-color: rgba(46, 160, 67, 0.15);
         color: #3fb950;
         border: 1px solid rgba(46, 160, 67, 0.4);
@@ -68,42 +72,42 @@ st.markdown(f"""
         border-radius: 20px;
         font-size: 12px;
         font-weight: 600;
-    }}
+    }
 
     /* Enterprise Metric Cards */
-    .metric-container {{
+    .metric-container {
         background-color: #111622;
         border: 1px solid #1c212e;
         border-radius: 8px;
         padding: 16px;
         position: relative;
-    }}
-    .metric-header {{
+    }
+    .metric-header {
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: #768390;
         margin-bottom: 8px;
-    }}
-    .metric-value {{
+    }
+    .metric-value {
         font-size: 28px;
         font-weight: 700;
         color: #f0f6fc;
-    }}
-    .metric-footer {{
+    }
+    .metric-footer {
         font-size: 12px;
         color: #57ab5a;
         margin-top: 6px;
-    }}
+    }
 
     /* Custom Matrix Display Table */
-    .cdm-table {{
+    .cdm-table {
         width: 100%;
         border-collapse: separate;
         border-spacing: 6px;
         margin-top: 10px;
-    }}
-    .cdm-header {{
+    }
+    .cdm-header {
         background-color: #161b26;
         color: #768390;
         padding: 12px;
@@ -111,8 +115,8 @@ st.markdown(f"""
         text-transform: uppercase;
         border-radius: 4px;
         text-align: center;
-    }}
-    .cdm-cell {{
+    }
+    .cdm-cell {
         background-color: #111622;
         border: 1px solid #1c212e;
         padding: 12px;
@@ -120,28 +124,34 @@ st.markdown(f"""
         font-size: 12px;
         color: #adbac7;
         transition: all 0.2s ease;
-    }}
-    .cdm-cell:hover {{
+    }
+    .cdm-cell:hover {
         border-color: #316dca;
         background-color: #161c2e;
-    }}
-    .cell-title {{
+    }
+    .cell-title {
         font-weight: 600;
         color: #f0f6fc;
         margin-bottom: 4px;
-    }}
-    .cell-tag {{
+    }
+    .cell-tag {
         font-size: 10px;
         color: #3fb950;
         background: rgba(63, 185, 80, 0.1);
         padding: 2px 6px;
         border-radius: 4px;
         display: inline-block;
-    }}
+    }
 
-    #MainMenu, footer {{ visibility: hidden; }}
+    #MainMenu, footer { visibility: hidden; }
 </style>
 """, unsafe_allow_html=True)
+
+# Helper: Inline SVG to Base64
+def svg_to_base64(svg_str):
+    return f"data:image/svg+xml;base64,{base64.b64encode(svg_str.encode('utf-8')).decode('utf-8')}"
+
+SHIELD_SVG = svg_to_base64('<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#58a6ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>')
 
 # State Management
 if "inventory" not in st.session_state:
@@ -165,7 +175,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# Top Metric Row
+# Top KPI Metrics Row
 c1, c2, c3, c4 = st.columns(4)
 with c1:
     st.markdown(f"""
@@ -217,7 +227,7 @@ if st.sidebar.button("⚡ Run AI Discovery Scan", type="primary", use_container_
         os_name = random.choice(["Windows 11 Enterprise", "macOS Sequoia", "Ubuntu 24.04 LTS"])
         new_assets.append({"Hostname": host, "IP Address": ip, "OS": os_name, "Status": "Monitored"})
         
-        # Generate Log
+        # Telemetry Log Generation
         st.session_state.telemetry_logs.append({
             "Timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),
             "Event": "ASSET_DISCOVERED",
@@ -234,13 +244,12 @@ if st.sidebar.button("🧹 Reset Telemetry", use_container_width=True):
     st.session_state.telemetry_logs = []
     st.rerun()
 
-# Main Matrix & Telemetry Tabs
+# Main Grid & Telemetry Tabs
 tab_matrix, tab_telemetry = st.tabs(["🧩 5x5 Cyber Defense Matrix Engine", "📜 SIEM Telemetry Console"])
 
 with tab_matrix:
     st.subheader("Sounil Yu 5x5 Matrix Control Plane")
     
-    # Custom HTML CDM Rendering
     cdm_html = """
     <table class="cdm-table">
         <tr>
@@ -301,7 +310,6 @@ with tab_telemetry:
         df_logs = pd.DataFrame(st.session_state.telemetry_logs)
         st.dataframe(df_logs, use_container_width=True)
         
-        # Log Export Buttons
         col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
             st.download_button(
