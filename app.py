@@ -5,10 +5,11 @@ import random
 import json
 import base64
 import socket
+import urllib.request
 from datetime import datetime
 
 # ==============================================================================
-# 1. Page Configuration & Custom CSS
+# 1. Page Configuration & Custom CSS (Enhanced UI / Styling)
 # ==============================================================================
 st.set_page_config(
     page_title="ERA SecOps | Enterprise Cyber Defense Matrix Platform",
@@ -31,17 +32,17 @@ st.markdown("""
         padding-bottom: 0rem !important;
     }
 
-    /* Dark Mode Theme */
+    /* Dark Mode Global Background */
     .stApp {
-        background-color: #090d16;
+        background-color: #0b0e14;
         color: #adbac7;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
     
     /* Dark Theme Sidebar Target */
     [data-testid="stSidebar"] {
-        background-color: #111622 !important;
-        border-right: 1px solid #1c212e;
+        background-color: #121824 !important;
+        border-right: 1px solid #1e2638;
     }
     [data-testid="stSidebar"] * {
         color: #adbac7 !important;
@@ -52,14 +53,15 @@ st.markdown("""
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background-color: #111622;
-        padding: 12px 24px;
-        border-radius: 8px;
-        border: 1px solid #1c212e;
-        margin-bottom: 20px;
+        background-color: #121824;
+        padding: 14px 28px;
+        border-radius: 10px;
+        border: 1px solid #1e2638;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        margin-bottom: 22px;
     }
     .brand-title {
-        font-size: 20px;
+        font-size: 21px;
         font-weight: 700;
         color: #f0f6fc;
         display: flex;
@@ -70,79 +72,129 @@ st.markdown("""
         background-color: rgba(46, 160, 67, 0.15);
         color: #3fb950;
         border: 1px solid rgba(46, 160, 67, 0.4);
-        padding: 4px 12px;
+        padding: 5px 14px;
         border-radius: 20px;
         font-size: 12px;
         font-weight: 600;
+        letter-spacing: 0.5px;
     }
 
     /* Metric Cards */
     .metric-container {
-        background-color: #111622;
-        border: 1px solid #1c212e;
-        border-radius: 8px;
-        padding: 16px;
+        background-color: #121824;
+        border: 1px solid #1e2638;
+        border-radius: 10px;
+        padding: 18px;
         position: relative;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
     }
     .metric-header {
         font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
         color: #768390;
         margin-bottom: 8px;
+        font-weight: 600;
     }
     .metric-value {
-        font-size: 28px;
+        font-size: 30px;
         font-weight: 700;
         color: #f0f6fc;
     }
     .metric-footer {
         font-size: 12px;
-        color: #57ab5a;
+        color: #3fb950;
         margin-top: 6px;
+        font-weight: 500;
     }
 
-    /* 5x5 Matrix Display Table */
+    /* Custom Styled Streamlit Tabs */
+    div[data-baseweb="tab-list"] {
+        gap: 12px !important;
+        background-color: #121824 !important;
+        padding: 8px 12px !important;
+        border-radius: 10px !important;
+        border: 1px solid #1e2638 !important;
+        margin-bottom: 20px !important;
+    }
+
+    div[data-baseweb="tab"] {
+        height: 44px !important;
+        background-color: #182030 !important;
+        border-radius: 8px !important;
+        border: 1px solid #253047 !important;
+        color: #768390 !important;
+        font-weight: 600 !important;
+        font-size: 13px !important;
+        padding: 0px 20px !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+
+    div[data-baseweb="tab"]:hover {
+        background-color: #202b40 !important;
+        color: #58a6ff !important;
+        border-color: #388bfd !important;
+    }
+
+    div[data-baseweb="tab"][aria-selected="true"] {
+        background: linear-gradient(135deg, #1f6beb 0%, #1158c7 100%) !important;
+        color: #ffffff !important;
+        border: 1px solid #58a6ff !important;
+        box-shadow: 0 0 10px rgba(56, 139, 253, 0.4) !important;
+    }
+
+    /* Remove Default Tab Underline Bar */
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+
+    /* 5x5 CDM Table Display */
     .cdm-table {
         width: 100%;
         border-collapse: separate;
-        border-spacing: 6px;
+        border-spacing: 8px;
         margin-top: 10px;
     }
     .cdm-header {
-        background-color: #161b26;
-        color: #768390;
-        padding: 12px;
+        background-color: #161e2e;
+        color: #8b949e;
+        padding: 14px;
         font-size: 12px;
         text-transform: uppercase;
-        border-radius: 4px;
+        letter-spacing: 0.6px;
+        border-radius: 6px;
         text-align: center;
+        font-weight: 700;
+        border: 1px solid #1e2638;
     }
     .cdm-cell {
-        background-color: #111622;
-        border: 1px solid #1c212e;
-        padding: 12px;
-        border-radius: 6px;
+        background-color: #121824;
+        border: 1px solid #1e2638;
+        padding: 14px;
+        border-radius: 8px;
         font-size: 12px;
         color: #adbac7;
         transition: all 0.2s ease;
     }
     .cdm-cell:hover {
-        border-color: #316dca;
-        background-color: #161c2e;
+        border-color: #388bfd;
+        background-color: #182236;
+        transform: translateY(-2px);
     }
     .cell-title {
         font-weight: 600;
         color: #f0f6fc;
-        margin-bottom: 4px;
+        margin-bottom: 6px;
     }
     .cell-tag {
         font-size: 10px;
         color: #3fb950;
-        background: rgba(63, 185, 80, 0.1);
-        padding: 2px 6px;
+        background: rgba(63, 185, 80, 0.12);
+        padding: 3px 8px;
         border-radius: 4px;
         display: inline-block;
+        font-weight: 600;
+        border: 1px solid rgba(63, 185, 80, 0.25);
     }
 
     #MainMenu, footer { visibility: hidden; }
@@ -150,7 +202,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==============================================================================
-# 2. Helper Functions & Session State Initialization
+# 2. Helper Functions & Intelligence Engines
 # ==============================================================================
 def svg_to_base64(svg_str):
     return f"data:image/svg+xml;base64,{base64.b64encode(svg_str.encode('utf-8')).decode('utf-8')}"
@@ -171,18 +223,64 @@ def detect_local_subnet():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.settimeout(0.5)
-        # Connect to public DNS to determine default outbound route IP
         s.connect(("8.8.8.8", 80))
         local_ip = s.getsockname()[0]
         s.close()
-        # Extract the network segment (assumes standard /24 subnet mask)
         ip_parts = local_ip.split('.')
         subnet = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.0/24"
         return subnet, local_ip
     except Exception:
         return "192.168.0.0/24", "127.0.0.1"
 
-# Out-Of-The-Box Live Local ARP Scanner Engine
+# Fast MAC OUI Vendor Lookup API
+def resolve_mac_vendor(mac_address):
+    mac_clean = mac_address.replace(":", "").replace("-", "").upper()
+    
+    # Common Static Vendor Prefixes
+    static_oui = {
+        "3C22FB": "Apple, Inc.",
+        "F4D488": "Apple, Inc.",
+        "0014D1": "Trendsnet / Router",
+        "E45F01": "Raspberry Pi Foundation",
+        "000C29": "VMware, Inc.",
+        "080027": "Oracle VirtualBox",
+        "B827EB": "Raspberry Pi Foundation",
+        "DCA632": "Raspberry Pi Trading"
+    }
+    
+    prefix = mac_clean[:6]
+    if prefix in static_oui:
+        return static_oui[prefix]
+
+    try:
+        url = f"https://api.macvendors.com/{mac_address}"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req, timeout=1.0) as response:
+            return response.read().decode('utf-8')
+    except Exception:
+        return "Network Hardware Vendor"
+
+# Device Type & OS Fingerprint Inference Engine
+def infer_device_os(hostname, ip, vendor):
+    vendor_lower = vendor.lower()
+    host_lower = hostname.lower()
+
+    if ip.endswith(".1"):
+        return "Embedded Linux Network Gateway"
+    elif "apple" in vendor_lower or "macbook" in host_lower or "iphone" in host_lower:
+        return "macOS / iOS Device"
+    elif "raspberry" in vendor_lower:
+        return "Raspberry Pi OS (Linux)"
+    elif "vmware" in vendor_lower or "virtualbox" in vendor_lower:
+        return "Virtual Machine Guest"
+    elif "amazon" in vendor_lower or "google" in vendor_lower or "nest" in host_lower:
+        return "Smart IoT Appliance"
+    elif "intel" in vendor_lower or "realtek" in vendor_lower:
+        return "Windows / Linux Workstation"
+    else:
+        return "Generic Network Appliance"
+
+# Live Local ARP Scanner Engine with OUI & Fingerprinting
 def run_live_arp_scan(ip_range=None):
     if not ip_range or ip_range == "AUTO":
         ip_range, host_ip = detect_local_subnet()
@@ -190,25 +288,31 @@ def run_live_arp_scan(ip_range=None):
     try:
         from scapy.all import ARP, Ether, srp
         
-        # Build ARP Broadcast Frame
         arp = ARP(pdst=ip_range)
         ether = Ether(dst="ff:ff:ff:ff:ff:ff")
         packet = ether / arp
 
-        # Fast sweep with timeout=0.8s
         result = srp(packet, timeout=0.8, verbose=False, iface="en0")[0]
 
         discovered = []
         for sent, received in result:
+            ip_addr = received.psrc
+            mac_addr = received.hwsrc.upper()
+
             try:
-                hostname = socket.gethostbyaddr(received.psrc)[0]
+                hostname = socket.gethostbyaddr(ip_addr)[0]
             except Exception:
-                hostname = "Network Device"
+                hostname = f"Host-{ip_addr.split('.')[-1]}"
+
+            vendor = resolve_mac_vendor(mac_addr)
+            os_type = infer_device_os(hostname, ip_addr, vendor)
 
             discovered.append({
                 "Hostname": hostname,
-                "IP Address": received.psrc,
-                "OS": f"MAC: {received.hwsrc}",
+                "IP Address": ip_addr,
+                "MAC Address": mac_addr,
+                "Manufacturer / Vendor": vendor,
+                "OS / Device Type": os_type,
                 "Status": "Live Host"
             })
         return discovered, ip_range
@@ -310,6 +414,7 @@ if st.sidebar.button("⚡ Run Network Scan / Execution", type="primary", use_con
                     "Timestamp": timestamp,
                     "Event": "LIVE_HOST_DISCOVERED",
                     "Target": f"{host['Hostname']} ({host['IP Address']})",
+                    "Vendor": host['Manufacturer / Vendor'],
                     "NIST Function": "Identify",
                     "Asset Class": "Devices",
                     "Severity": "INFO"
@@ -320,11 +425,21 @@ if st.sidebar.button("⚡ Run Network Scan / Execution", type="primary", use_con
             host = f"WORKSTATION-{random.randint(100, 999)}"
             ip = fake.ipv4_private()
             os_name = random.choice(["Windows 11 Enterprise", "macOS Sequoia", "Ubuntu 24.04 LTS"])
-            new_assets.append({"Hostname": host, "IP Address": ip, "OS": os_name, "Status": "Monitored"})
+            vendor = random.choice(["Dell Inc.", "Apple, Inc.", "Lenovo", "Hewlett-Packard"])
+            mac = fake.mac_address().upper()
+            new_assets.append({
+                "Hostname": host, 
+                "IP Address": ip, 
+                "MAC Address": mac,
+                "Manufacturer / Vendor": vendor,
+                "OS / Device Type": os_name, 
+                "Status": "Monitored"
+            })
             st.session_state.telemetry_logs.append({
                 "Timestamp": timestamp,
                 "Event": "SIMULATED_ASSET_DISCOVERED",
                 "Target": f"{host} ({ip})",
+                "Vendor": vendor,
                 "NIST Function": "Identify",
                 "Asset Class": "Devices",
                 "Severity": "INFO"
@@ -336,18 +451,18 @@ if st.sidebar.button("⚡ Run Network Scan / Execution", type="primary", use_con
     if sim_type == "Ransomware Execution":
         st.session_state.threat_status = "CRITICAL"
         st.session_state.telemetry_logs.extend([
-            {"Timestamp": timestamp, "Event": "UNAUTHORIZED_FILE_ENCRYPTION", "Target": "FS-01/Shared_Drive", "NIST Function": "Protect", "Asset Class": "Data", "Severity": "CRITICAL"},
-            {"Timestamp": timestamp, "Event": "HOST_AUTO_QUARANTINE_TRIGGERED", "Target": "FS-01 (192.168.1.50)", "NIST Function": "Respond", "Asset Class": "Devices", "Severity": "HIGH"}
+            {"Timestamp": timestamp, "Event": "UNAUTHORIZED_FILE_ENCRYPTION", "Target": "FS-01/Shared_Drive", "Vendor": "Enterprise Storage", "NIST Function": "Protect", "Asset Class": "Data", "Severity": "CRITICAL"},
+            {"Timestamp": timestamp, "Event": "HOST_AUTO_QUARANTINE_TRIGGERED", "Target": "FS-01 (192.168.1.50)", "Vendor": "Enterprise Storage", "NIST Function": "Respond", "Asset Class": "Devices", "Severity": "HIGH"}
         ])
     elif sim_type == "Data Exfiltration":
         st.session_state.threat_status = "ELEVATED"
         st.session_state.telemetry_logs.extend([
-            {"Timestamp": timestamp, "Event": "ANOMALOUS_OUTBOUND_TRANSFER", "Target": "10.0.0.12 -> 185.220.101.5", "NIST Function": "Detect", "Asset Class": "Networks", "Severity": "CRITICAL"}
+            {"Timestamp": timestamp, "Event": "ANOMALOUS_OUTBOUND_TRANSFER", "Target": "10.0.0.12 -> 185.220.101.5", "Vendor": "Cisco Systems", "NIST Function": "Detect", "Asset Class": "Networks", "Severity": "CRITICAL"}
         ])
     elif sim_type == "Credential Harvesting":
         st.session_state.threat_status = "ELEVATED"
         st.session_state.telemetry_logs.extend([
-            {"Timestamp": timestamp, "Event": "LSASS_MEMORY_DUMP", "Target": "DC-01.domain.local", "NIST Function": "Detect", "Asset Class": "Users", "Severity": "CRITICAL"}
+            {"Timestamp": timestamp, "Event": "LSASS_MEMORY_DUMP", "Target": "DC-01.domain.local", "Vendor": "Microsoft Corp", "NIST Function": "Detect", "Asset Class": "Users", "Severity": "CRITICAL"}
         ])
 
 if st.sidebar.button("🧹 Reset Telemetry & State", use_container_width=True):
@@ -357,12 +472,12 @@ if st.sidebar.button("🧹 Reset Telemetry & State", use_container_width=True):
     st.rerun()
 
 # ==============================================================================
-# 5. Tab Views (Matrix, Inventory, Telemetry)
+# 5. Enhanced Tab Navigation & Display
 # ==============================================================================
 tab_matrix, tab_inventory, tab_telemetry = st.tabs([
-    "🧩 5x5 Cyber Defense Matrix Engine", 
-    "🖥️ Active Asset Inventory", 
-    "📜 SIEM Telemetry Console"
+    "🧩  5x5 Cyber Defense Matrix Engine", 
+    "🖥️  Active Asset Inventory", 
+    "📜  SIEM Telemetry Console"
 ])
 
 with tab_matrix:
