@@ -166,8 +166,27 @@ if "threat_status" not in st.session_state:
 
 fake = Faker()
 
-# Live Local ARP Scanner Engine (Optimized for macOS / Streamlit)
-def run_live_arp_scan(ip_range="192.168.1.0/24"):
+# Automatic Local Network Interface & Subnet Discovery
+def detect_local_subnet():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(0.5)
+        # Connect to public DNS to determine default outbound route IP
+        s.connect(("8.8.8.8", 80))
+        local_ip = s.getsockname()[0]
+        s.close()
+        # Extract the network segment (assumes standard /24 subnet mask)
+        ip_parts = local_ip.split('.')
+        subnet = f"{ip_parts[0]}.{ip_parts[1]}.{ip_parts[2]}.0/24"
+        return subnet, local_ip
+    except Exception:
+        return "192.168.0.0/24", "127.0.0.1"
+
+# Out-Of-The-Box Live Local ARP Scanner Engine
+def run_live_arp_scan(ip_range=None):
+    if not ip_range or ip_range == "AUTO":
+        ip_range, host_ip = detect_local_subnet()
+
     try:
         from scapy.all import ARP, Ether, srp
         
@@ -176,8 +195,7 @@ def run_live_arp_scan(ip_range="192.168.1.0/24"):
         ether = Ether(dst="ff:ff:ff:ff:ff:ff")
         packet = ether / arp
 
-        # timeout=0.8 speeds up response time across the subnet
-        # iface="en0" forces primary Wi-Fi/Ethernet interface on macOS
+        # Fast sweep with timeout=0.8s
         result = srp(packet, timeout=0.8, verbose=False, iface="en0")[0]
 
         discovered = []
@@ -193,15 +211,15 @@ def run_live_arp_scan(ip_range="192.168.1.0/24"):
                 "OS": f"MAC: {received.hwsrc}",
                 "Status": "Live Host"
             })
-        return discovered
+        return discovered, ip_range
 
     except PermissionError:
         st.sidebar.error("Permission Denied: Raw sockets require elevated rights.")
         st.sidebar.info("Fix: Launch using 'sudo ./.venv/bin/streamlit run app.py'")
-        return []
+        return [], ip_range
     except Exception as e:
         st.sidebar.error(f"Live scan error: {str(e)}")
-        return []
+        return [], ip_range
 
 # ==============================================================================
 # 3. Application Layout & Header UI
@@ -266,7 +284,9 @@ st.sidebar.markdown("### 🎛️ Operations Control")
 scan_mode = st.sidebar.radio("Scanner Mode", ["Simulation Mode", "Live Local Subnet Scan"])
 
 if scan_mode == "Live Local Subnet Scan":
-    target_subnet = st.sidebar.text_input("Target Subnet", value="192.168.1.0/24")
+    detected_subnet, host_ip = detect_local_subnet()
+    st.sidebar.success(f"Detected Network: {detected_subnet}")
+    st.sidebar.caption(f"Host IP: {host_ip}")
 
 sim_type = st.sidebar.selectbox("Select Attack Scenario", [
     "Baseline Operations", 
@@ -280,11 +300,11 @@ if st.sidebar.button("⚡ Run Network Scan / Execution", type="primary", use_con
     
     # Discovery Execution
     if scan_mode == "Live Local Subnet Scan":
-        st.sidebar.info("Scanning physical network...")
-        real_assets = run_live_arp_scan(target_subnet)
+        st.sidebar.info("Executing auto-detected subnet scan...")
+        real_assets, scanned_range = run_live_arp_scan("AUTO")
         if real_assets:
             st.session_state.inventory.extend(real_assets)
-            st.sidebar.success(f"Discovered {len(real_assets)} live local hosts!")
+            st.sidebar.success(f"Discovered {len(real_assets)} live hosts on {scanned_range}!")
             for host in real_assets:
                 st.session_state.telemetry_logs.append({
                     "Timestamp": timestamp,
