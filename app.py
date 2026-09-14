@@ -5,7 +5,6 @@ import random
 import json
 import base64
 import socket
-import urllib.request
 import psutil
 import ipaddress
 import platform
@@ -379,8 +378,6 @@ def resolve_mac_vendor(mac_address):
     if prefix in static_oui:
         return static_oui[prefix]
 
-    # Do not make external requests for every device by default.
-    # This keeps the scanner responsive and avoids rate limits.
     return "Unknown / Network Hardware"
 
 
@@ -488,8 +485,6 @@ def run_live_arp_scan(
         if progress_bar:
             progress_bar.progress(15)
 
-        # IMPORTANT:
-        # No hard-coded iface="en0".
         result = srp(
             packet,
             timeout=2,
@@ -1037,10 +1032,6 @@ if run_scan:
 
     timestamp = utc_now_string()
 
-    # --------------------------------------------------------------
-    # Visible MAIN PAGE scan panel
-    # --------------------------------------------------------------
-
     st.markdown(
         """
         <div class="scan-panel">
@@ -1083,57 +1074,33 @@ if run_scan:
 
         if real_assets:
 
-            merge_inventory(
-                real_assets
-            )
+            merge_inventory(real_assets)
 
             for host in real_assets:
 
                 st.session_state.telemetry_logs.append(
                     {
-                        "Timestamp":
-                            timestamp,
-
-                        "Event":
-                            "LIVE_HOST_DISCOVERED",
-
-                        "Target":
-                            (
-                                f"{host['Hostname']} "
-                                f"({host['IP Address']})"
-                            ),
-
-                        "Vendor":
-                            host[
-                                "Manufacturer / Vendor"
-                            ],
-
-                        "NIST Function":
-                            "Identify",
-
-                        "Asset Class":
-                            "Devices",
-
-                        "Severity":
-                            "INFO",
-
-                        "Source":
-                            "LIVE_ARP_SCAN",
+                        "Timestamp": timestamp,
+                        "Event": "LIVE_HOST_DISCOVERED",
+                        "Target": (
+                            f"{host['Hostname']} "
+                            f"({host['IP Address']})"
+                        ),
+                        "Vendor": host[
+                            "Manufacturer / Vendor"
+                        ],
+                        "NIST Function": "Identify",
+                        "Asset Class": "Devices",
+                        "Severity": "INFO",
+                        "Source": "LIVE_ARP_SCAN",
                     }
                 )
 
         st.session_state.last_scan_status = {
-            "count":
-                len(real_assets),
-
-            "subnet":
-                scanned_range,
-
-            "time":
-                timestamp,
-
-            "mode":
-                "Live Local Subnet Scan",
+            "count": len(real_assets),
+            "subnet": scanned_range,
+            "time": timestamp,
+            "mode": "Live Local Subnet Scan",
         }
 
     # ==============================================================
@@ -1143,16 +1110,13 @@ if run_scan:
     else:
 
         total_simulated = 5
-
         new_assets = []
 
         status_box.info(
             "🧪 Starting simulated asset discovery..."
         )
 
-        for i in range(
-            total_simulated
-        ):
+        for i in range(total_simulated):
 
             host = (
                 f"WORKSTATION-"
@@ -1182,57 +1146,30 @@ if run_scan:
 
             new_assets.append(
                 {
-                    "Hostname":
-                        host,
-
-                    "IP Address":
-                        ip,
-
-                    "MAC Address":
-                        mac,
-
-                    "Manufacturer / Vendor":
-                        vendor,
-
-                    "OS / Device Type":
-                        os_name,
-
-                    "Status":
-                        "Simulated / Monitored",
+                    "Hostname": host,
+                    "IP Address": ip,
+                    "MAC Address": mac,
+                    "Manufacturer / Vendor": vendor,
+                    "OS / Device Type": os_name,
+                    "Status": "Simulated / Monitored",
                 }
             )
 
             st.session_state.telemetry_logs.append(
                 {
-                    "Timestamp":
-                        timestamp,
-
-                    "Event":
-                        "SIMULATED_ASSET_DISCOVERED",
-
-                    "Target":
-                        f"{host} ({ip})",
-
-                    "Vendor":
-                        vendor,
-
-                    "NIST Function":
-                        "Identify",
-
-                    "Asset Class":
-                        "Devices",
-
-                    "Severity":
-                        "INFO",
-
-                    "Source":
-                        "SIMULATION",
+                    "Timestamp": timestamp,
+                    "Event": "SIMULATED_ASSET_DISCOVERED",
+                    "Target": f"{host} ({ip})",
+                    "Vendor": vendor,
+                    "NIST Function": "Identify",
+                    "Asset Class": "Devices",
+                    "Severity": "INFO",
+                    "Source": "SIMULATION",
                 }
             )
 
             percent = int(
-                ((i + 1) / total_simulated)
-                * 100
+                ((i + 1) / total_simulated) * 100
             )
 
             progress_bar.progress(
@@ -1248,26 +1185,17 @@ if run_scan:
                 f"{i + 1}/{total_simulated}..."
             )
 
-        merge_inventory(
-            new_assets
-        )
+        merge_inventory(new_assets)
 
         status_box.success(
             "✅ Simulation scan complete."
         )
 
         st.session_state.last_scan_status = {
-            "count":
-                total_simulated,
-
-            "subnet":
-                "Simulated Range",
-
-            "time":
-                timestamp,
-
-            "mode":
-                "Simulation Mode",
+            "count": total_simulated,
+            "subnet": "Simulated Range",
+            "time": timestamp,
+            "mode": "Simulation Mode",
         }
 
     # ==============================================================
@@ -1276,131 +1204,64 @@ if run_scan:
 
     if sim_type == "Ransomware Execution":
 
-        st.session_state.threat_status = (
-            "CRITICAL"
-        )
+        st.session_state.threat_status = "CRITICAL"
 
         st.session_state.telemetry_logs.extend(
             [
                 {
-                    "Timestamp":
-                        timestamp,
-
-                    "Event":
-                        "UNAUTHORIZED_FILE_ENCRYPTION",
-
-                    "Target":
-                        "FS-01/Shared_Drive",
-
-                    "Vendor":
-                        "Enterprise Storage",
-
-                    "NIST Function":
-                        "Protect",
-
-                    "Asset Class":
-                        "Data",
-
-                    "Severity":
-                        "CRITICAL",
-
-                    "Source":
-                        "SIMULATION",
+                    "Timestamp": timestamp,
+                    "Event": "UNAUTHORIZED_FILE_ENCRYPTION",
+                    "Target": "FS-01/Shared_Drive",
+                    "Vendor": "Enterprise Storage",
+                    "NIST Function": "Protect",
+                    "Asset Class": "Data",
+                    "Severity": "CRITICAL",
+                    "Source": "SIMULATION",
                 },
-
                 {
-                    "Timestamp":
-                        timestamp,
-
-                    "Event":
-                        "HOST_AUTO_QUARANTINE_TRIGGERED",
-
-                    "Target":
-                        "FS-01",
-
-                    "Vendor":
-                        "Enterprise Storage",
-
-                    "NIST Function":
-                        "Respond",
-
-                    "Asset Class":
-                        "Devices",
-
-                    "Severity":
-                        "HIGH",
-
-                    "Source":
-                        "SIMULATION",
+                    "Timestamp": timestamp,
+                    "Event": "HOST_AUTO_QUARANTINE_TRIGGERED",
+                    "Target": "FS-01",
+                    "Vendor": "Enterprise Storage",
+                    "NIST Function": "Respond",
+                    "Asset Class": "Devices",
+                    "Severity": "HIGH",
+                    "Source": "SIMULATION",
                 },
             ]
         )
 
     elif sim_type == "Data Exfiltration":
 
-        st.session_state.threat_status = (
-            "ELEVATED"
-        )
+        st.session_state.threat_status = "ELEVATED"
 
         st.session_state.telemetry_logs.append(
             {
-                "Timestamp":
-                    timestamp,
-
-                "Event":
-                    "ANOMALOUS_OUTBOUND_TRANSFER",
-
-                "Target":
-                    "Simulated outbound transfer",
-
-                "Vendor":
-                    "Network Telemetry",
-
-                "NIST Function":
-                    "Detect",
-
-                "Asset Class":
-                    "Networks",
-
-                "Severity":
-                    "CRITICAL",
-
-                "Source":
-                    "SIMULATION",
+                "Timestamp": timestamp,
+                "Event": "ANOMALOUS_OUTBOUND_TRANSFER",
+                "Target": "Simulated outbound transfer",
+                "Vendor": "Network Telemetry",
+                "NIST Function": "Detect",
+                "Asset Class": "Networks",
+                "Severity": "CRITICAL",
+                "Source": "SIMULATION",
             }
         )
 
     elif sim_type == "Credential Harvesting":
 
-        st.session_state.threat_status = (
-            "ELEVATED"
-        )
+        st.session_state.threat_status = "ELEVATED"
 
         st.session_state.telemetry_logs.append(
             {
-                "Timestamp":
-                    timestamp,
-
-                "Event":
-                    "CREDENTIAL_ACCESS_SIMULATION",
-
-                "Target":
-                    "Simulated Domain Controller",
-
-                "Vendor":
-                    "Microsoft Corp",
-
-                "NIST Function":
-                    "Detect",
-
-                "Asset Class":
-                    "Users",
-
-                "Severity":
-                    "CRITICAL",
-
-                "Source":
-                    "SIMULATION",
+                "Timestamp": timestamp,
+                "Event": "CREDENTIAL_ACCESS_SIMULATION",
+                "Target": "Simulated Domain Controller",
+                "Vendor": "Microsoft Corp",
+                "NIST Function": "Detect",
+                "Asset Class": "Users",
+                "Severity": "CRITICAL",
+                "Source": "SIMULATION",
             }
         )
 
@@ -1424,7 +1285,6 @@ if run_scan:
         f"{completed_count} live host(s) discovered."
     )
 
-    # Create the report immediately.
     final_report = json.dumps(
         build_full_report(),
         indent=2,
@@ -1509,48 +1369,28 @@ with tab_matrix:
             <td class="cdm-header">Identify</td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    Asset Discovery
-                </div>
-                <span class="cell-tag">
-                    AUTOMATED
-                </span>
+                <div class="cell-title">Asset Discovery</div>
+                <span class="cell-tag">AUTOMATED</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    App Inventory
-                </div>
-                <span class="cell-tag">
-                    ACTIVE
-                </span>
+                <div class="cell-title">App Inventory</div>
+                <span class="cell-tag">ACTIVE</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    Port Mapping
-                </div>
-                <span class="cell-tag">
-                    ACTIVE
-                </span>
+                <div class="cell-title">Port Mapping</div>
+                <span class="cell-tag">ACTIVE</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    Data Discovery
-                </div>
-                <span class="cell-tag">
-                    ACTIVE
-                </span>
+                <div class="cell-title">Data Discovery</div>
+                <span class="cell-tag">ACTIVE</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    IAM Mapping
-                </div>
-                <span class="cell-tag">
-                    ACTIVE
-                </span>
+                <div class="cell-title">IAM Mapping</div>
+                <span class="cell-tag">ACTIVE</span>
             </td>
         </tr>
 
@@ -1558,52 +1398,230 @@ with tab_matrix:
             <td class="cdm-header">Protect</td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    EDR Prevention
-                </div>
-                <span class="cell-tag">
-                    ENFORCED
-                </span>
+                <div class="cell-title">EDR Prevention</div>
+                <span class="cell-tag">ENFORCED</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    App Control
-                </div>
-                <span class="cell-tag">
-                    ENFORCED
-                </span>
+                <div class="cell-title">App Control</div>
+                <span class="cell-tag">ENFORCED</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    Microsegmentation
-                </div>
-                <span class="cell-tag">
-                    ENFORCED
-                </span>
+                <div class="cell-title">Microsegmentation</div>
+                <span class="cell-tag">ENFORCED</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    AES-256 Vault
-                </div>
-                <span class="cell-tag">
-                    ENFORCED
-                </span>
+                <div class="cell-title">AES-256 Vault</div>
+                <span class="cell-tag">ENFORCED</span>
             </td>
 
             <td class="cdm-cell">
-                <div class="cell-title">
-                    FIDO2 MFA
-                </div>
-                <span class="cell-tag">
-                    ENFORCED
-                </span>
+                <div class="cell-title">FIDO2 MFA</div>
+                <span class="cell-tag">ENFORCED</span>
             </td>
         </tr>
 
         <tr>
             <td class="cdm-header">Detect</td>
 
-            <td class="cd
+            <td class="cdm-cell">
+                <div class="cell-title">EDR Telemetry</div>
+                <span class="cell-tag">MONITORING</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Runtime Detection</div>
+                <span class="cell-tag">MONITORING</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">IDS / IPS</div>
+                <span class="cell-tag">MONITORING</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">DLP Monitoring</div>
+                <span class="cell-tag">MONITORING</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">UEBA</div>
+                <span class="cell-tag">MONITORING</span>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="cdm-header">Respond</td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Host Isolation</div>
+                <span class="cell-tag">AUTOMATED</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">App Termination</div>
+                <span class="cell-tag">AUTOMATED</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Network Blocking</div>
+                <span class="cell-tag">AUTOMATED</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Data Containment</div>
+                <span class="cell-tag">AUTOMATED</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Account Lockout</div>
+                <span class="cell-tag">AUTOMATED</span>
+            </td>
+        </tr>
+
+        <tr>
+            <td class="cdm-header">Recover</td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Device Restore</div>
+                <span class="cell-tag">READY</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Application Recovery</div>
+                <span class="cell-tag">READY</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Network Restoration</div>
+                <span class="cell-tag">READY</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Data Recovery</div>
+                <span class="cell-tag">READY</span>
+            </td>
+
+            <td class="cdm-cell">
+                <div class="cell-title">Identity Recovery</div>
+                <span class="cell-tag">READY</span>
+            </td>
+        </tr>
+
+    </table>
+    """
+
+    st.markdown(
+        cdm_html,
+        unsafe_allow_html=True,
+    )
+
+
+# ==============================================================================
+# 20. ACTIVE ASSET INVENTORY
+# ==============================================================================
+
+with tab_inventory:
+
+    st.subheader("Active Asset Inventory")
+
+    if st.session_state.inventory:
+
+        inventory_df = pd.DataFrame(
+            st.session_state.inventory
+        )
+
+        st.dataframe(
+            inventory_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    else:
+
+        st.info(
+            "No assets discovered yet. "
+            "Run a network scan to populate the inventory."
+        )
+
+
+# ==============================================================================
+# 21. CONNECTION THREAT MONITOR
+# ==============================================================================
+
+with tab_connections:
+
+    st.subheader("Connection Threat Monitor")
+
+    connections = analyze_active_connections()
+
+    if connections:
+
+        connections_df = pd.DataFrame(
+            connections
+        )
+
+        st.dataframe(
+            connections_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    else:
+
+        st.info(
+            "No established network connections "
+            "were detected."
+        )
+
+
+# ==============================================================================
+# 22. SIEM TELEMETRY CONSOLE
+# ==============================================================================
+
+with tab_telemetry:
+
+    st.subheader("SIEM Telemetry Console")
+
+    if st.session_state.telemetry_logs:
+
+        telemetry_df = pd.DataFrame(
+            st.session_state.telemetry_logs
+        )
+
+        st.dataframe(
+            telemetry_df,
+            use_container_width=True,
+            hide_index=True,
+        )
+
+    else:
+
+        st.info(
+            "No telemetry events have been generated yet."
+        )
+
+
+# ==============================================================================
+# 23. FOOTER
+# ==============================================================================
+
+st.markdown(
+    """
+    <div style="
+        text-align:center;
+        color:#768390;
+        font-size:11px;
+        margin-top:30px;
+        padding:15px;
+        border-top:1px solid #1e2638;
+    ">
+        ERA SecOps Cyber Defense Matrix Suite
+        • Local Security Operations Platform
+        • Enterprise Defense Telemetry
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
